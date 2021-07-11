@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Yeon22/Go-Scrapper/scrapper"
+	"github.com/Yeon22/Go-Scrapper/go-scrapper"
 	"github.com/labstack/echo/v4"
 )
 

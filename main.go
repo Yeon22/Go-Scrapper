@@ -23,10 +23,15 @@ var baseURL string = "https://stackoverflow.com/jobs?q=go+developer"
 func main() {
 	var jobs []extractJob
 	totalPages := getPages()
+	c := make(chan []extractJob)
 
 	// stackoverflow의 처음 전체 페이지를 반복
 	for i := 0; i < totalPages; i++ {
-		extractedJobs := getPage(i)
+		go getPage(i, c)
+	}
+
+	for i := 0; i < totalPages; i++ {
+		extractedJobs := <-c
 		// getPage는 slice를 return하므로 jobs에 contents만 추가하도록 ...을 사용
 		jobs = append(jobs, extractedJobs...)
 	}
@@ -51,13 +56,13 @@ func writeJobs(jobs []extractJob) {
 
 	for _, job := range jobs {
 		jobSlice := []string{"https://stackoverflow.com/jobs/" + job.id, job.title, job.location}
-		jwErr := w.Write(jobSlice)
-		checkErr(jwErr)
+		go w.Write(jobSlice)
 	}
 }
 
-func getPage(page int) []extractJob {
+func getPage(page int, mainC chan<- []extractJob) {
 	var jobs []extractJob
+	c := make(chan extractJob)
 	pageURL := baseURL + "&pg=" + strconv.Itoa(page)
 	fmt.Println("Request URL", pageURL)
 	res, err := http.Get(pageURL)
@@ -70,19 +75,28 @@ func getPage(page int) []extractJob {
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	checkErr(err)
 
-	doc.Find(".-job").Each(func(i int, job *goquery.Selection) {
-		jobData := extractJobData(job)
-		jobs = append(jobs, jobData)
+	searchJobs := doc.Find(".-job")
+
+	searchJobs.Each(func(i int, job *goquery.Selection) {
+		// goroutine 생성
+		go extractJobData(job, c)
 	})
 
-	return jobs
+	for i := 0; i < searchJobs.Length(); i++ {
+		// extractJobData에서 보낸 메시지를 받음
+		job := <-c
+		jobs = append(jobs, job)
+	}
+
+	mainC <- jobs
 }
 
-func extractJobData(job *goquery.Selection) extractJob {
+func extractJobData(job *goquery.Selection, c chan<- extractJob) {
 	jobId, _ := job.Attr("data-jobid")
 	title := cleanString(job.Find("h2>a").Text())
 	location := cleanString(job.Find("h3 .fc-black-500").Text())
-	return extractJob{id: jobId, title: title, location: location}
+	// channel에 extractJob을 전달
+	c <- extractJob{id: jobId, title: title, location: location}
 }
 
 func getPages() int {

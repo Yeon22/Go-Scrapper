@@ -40,13 +40,13 @@ func Scrape(term string) {
 }
 
 func writeJobs(jobs []extractJob) {
-	// csv 파일 생성
-	file, err := os.Create(main.fileName)
+	// jobs.csv 파일 생성
+	file, err := os.Create("jobs.csv")
 	checkErr(err)
 
 	// w에 file의 데이터를 입력
 	w := csv.NewWriter(file)
-	// csv.NewWriter 함수가 끝나면 csv 파일에 데이터를 저장
+	// csv.NewWriter 함수가 끝나면 jobs.csv 파일에 데이터를 저장
 	defer w.Flush()
 
 	headers := []string{"LINK", "TITLE", "LOCATION"}

@@ -4,8 +4,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Yeon22/Go-Scrapper/go-scrapper"
 	"github.com/labstack/echo/v4"
+	"github.com/yeon22/go-scrapper/scrapper"
 )
 
 const fileName string = "jobs.csv"

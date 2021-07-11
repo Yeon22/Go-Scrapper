@@ -2,10 +2,10 @@ package main
 
 import (
 	"os"
+	"scrapper/scrapper"
 	"strings"
 
 	"github.com/labstack/echo/v4"
-	"github.com/yeon22/go-scrapper/scrapper"
 )
 
 const fileName string = "jobs.csv"
@@ -16,7 +16,7 @@ func handleHome(c echo.Context) error {
 
 func handleScrape(c echo.Context) error {
 	defer os.Remove(fileName)
-	term := strings.ToLower(scrapper.CleanString())
+	term := strings.ToLower(scrapper.CleanString(c.FormValue("term")))
 	scrapper.Scrape(term)
 	return c.Attachment(fileName, fileName)
 }

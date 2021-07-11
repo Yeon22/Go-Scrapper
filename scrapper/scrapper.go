@@ -18,17 +18,15 @@ type extractJob struct {
 	location string
 }
 
-var baseURL string = "https://stackoverflow.com/jobs?q=go"
-
 func Scrape(term string) {
-	var URL string = "https://stackoverflow.com/jobs?q=go" + term + "+developer"
+	var baseURL string = "https://stackoverflow.com/jobs?q=" + term
 	var jobs []extractJob
-	totalPages := getPages()
+	totalPages := getPages(baseURL)
 	c := make(chan []extractJob)
 
 	// stackoverflow의 처음 전체 페이지를 반복
 	for i := 0; i < totalPages; i++ {
-		go getPage(i, c)
+		go getPage(i, baseURL, c)
 	}
 
 	for i := 0; i < totalPages; i++ {
@@ -42,13 +40,13 @@ func Scrape(term string) {
 }
 
 func writeJobs(jobs []extractJob) {
-	// jobs.csv 파일 생성
-	file, err := os.Create("jobs.csv")
+	// csv 파일 생성
+	file, err := os.Create(main.fileName)
 	checkErr(err)
 
 	// w에 file의 데이터를 입력
 	w := csv.NewWriter(file)
-	// csv.NewWriter 함수가 끝나면 jobs.csv 파일에 데이터를 저장
+	// csv.NewWriter 함수가 끝나면 csv 파일에 데이터를 저장
 	defer w.Flush()
 
 	headers := []string{"LINK", "TITLE", "LOCATION"}
@@ -61,10 +59,10 @@ func writeJobs(jobs []extractJob) {
 	}
 }
 
-func getPage(page int, mainC chan<- []extractJob) {
+func getPage(page int, baseURL string, mainC chan<- []extractJob) {
 	var jobs []extractJob
 	c := make(chan extractJob)
-	pageURL := baseURL + "+developer&pg=" + strconv.Itoa(page)
+	pageURL := baseURL + "&pg=" + strconv.Itoa(page)
 	fmt.Println("Request URL", pageURL)
 	res, err := http.Get(pageURL)
 	checkErr(err)
@@ -94,13 +92,13 @@ func getPage(page int, mainC chan<- []extractJob) {
 
 func extractJobData(job *goquery.Selection, c chan<- extractJob) {
 	jobId, _ := job.Attr("data-jobid")
-	title := cleanString(job.Find("h2>a").Text())
-	location := cleanString(job.Find("h3 .fc-black-500").Text())
+	title := CleanString(job.Find("h2>a").Text())
+	location := CleanString(job.Find("h3 .fc-black-500").Text())
 	// channel에 extractJob을 전달
 	c <- extractJob{id: jobId, title: title, location: location}
 }
 
-func getPages() int {
+func getPages(baseURL string) int {
 	pages := 0
 	res, err := http.Get(baseURL)
 	checkErr(err)
@@ -130,6 +128,6 @@ func checkStatusCode(res *http.Response) {
 	}
 }
 
-func cleanString(str string) string {
+func CleanString(str string) string {
 	return strings.Join(strings.Fields(strings.TrimSpace(str)), " ")
 }
